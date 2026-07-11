@@ -1,0 +1,43 @@
+// Prisma schema for the Yandex.Direct agency dashboard.
+// NOTE: Yandex.Direct account tokens live ONLY in environment variables,
+// never in this database. Here we store just the login user and cached
+// report snapshots.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  VIEWER
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  role         Role     @default(ADMIN)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+// A cached snapshot of a Yandex.Direct report for a single account and a
+// single date range. `rows` holds the parsed per-campaign statistics as JSON.
+// One snapshot is kept per (accountId, dateFrom, dateTo) and refreshed in place.
+model ReportSnapshot {
+  id          String   @id @default(cuid())
+  accountId   String // matches an id from the YANDEX_ACCOUNTS env variable
+  dateFrom    String // ISO date, e.g. 2026-07-01
+  dateTo      String // ISO date, e.g. 2026-07-11
+  rows        Json // CampaignRow[] — see src/types/yandex.ts
+  refreshedAt DateTime @default(now())
+
+  @@unique([accountId, dateFrom, dateTo])
+  @@index([accountId])
+}
