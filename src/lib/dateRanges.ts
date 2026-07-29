@@ -5,6 +5,7 @@
 export type PresetKey =
   | "today"
   | "yesterday"
+  | "last7"
   | "lastWeek"
   | "last30"
   | "last3m";
@@ -22,6 +23,7 @@ export interface Preset {
 export const PRESETS: Preset[] = [
   { key: "today", label: "Сегодня" },
   { key: "yesterday", label: "Вчера" },
+  { key: "last7", label: "Последние 7 дней" },
   { key: "lastWeek", label: "Прошлая неделя" },
   { key: "last30", label: "Последние 30 дней" },
   { key: "last3m", label: "Последние 3 мес" },
@@ -60,6 +62,9 @@ export function presetRange(key: PresetKey, today = new Date()): DateRange {
       const lastSunday = addDays(lastMonday, 6);
       return { dateFrom: toIso(lastMonday), dateTo: toIso(lastSunday) };
     }
+
+    case "last7":
+      return { dateFrom: toIso(addDays(today, -6)), dateTo: toIso(today) };
 
     case "last30":
       return { dateFrom: toIso(addDays(today, -29)), dateTo: toIso(today) };

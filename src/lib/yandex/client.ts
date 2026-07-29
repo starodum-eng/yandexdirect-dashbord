@@ -7,6 +7,10 @@ const REPORTS_ENDPOINT = "https://api.direct.yandex.com/json/v5/reports";
 // Max attempts to poll for an asynchronously-generated report (HTTP 201/202).
 const MAX_POLL_ATTEMPTS = 8;
 
+// Attribution model used when counting conversions for specific goals.
+// LSC = last significant click. Override via env if needed.
+const ATTRIBUTION_MODEL = process.env.YANDEX_ATTRIBUTION_MODEL ?? "LSC";
+
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
@@ -36,12 +40,22 @@ export async function fetchAccountReport({
   dateFrom,
   dateTo,
 }: FetchReportParams): Promise<CampaignRow[]> {
+  // When the account restricts leads to specific goals, request per-goal
+  // conversion columns (Conversions_<goalId>_<model>) for those goals; the
+  // report parser sums them. Without goals, the aggregated Conversions column
+  // (all Metrica goals) is returned.
+  const goalParams =
+    account.goals.length > 0
+      ? { Goals: account.goals, AttributionModels: [ATTRIBUTION_MODEL] }
+      : {};
+
   const body = {
     params: {
       SelectionCriteria: {
         DateFrom: dateFrom,
         DateTo: dateTo,
       },
+      ...goalParams,
       FieldNames: REPORT_FIELDS,
       ReportName: `report_${account.id}_${dateFrom}_${dateTo}_${Date.now()}`,
       ReportType: "CUSTOM_REPORT",

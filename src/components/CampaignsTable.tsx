@@ -8,11 +8,14 @@ import {
   formatMoney,
   formatPercent,
 } from "@/lib/format";
+import { LOW_BALANCE_THRESHOLD } from "@/lib/constants";
 
-// A campaign row enriched with its owning account label and derived CPA.
+// A campaign row enriched with its owning account label, derived CPA, and the
+// owning account's balance (used to flag low-balance accounts).
 interface EnrichedRow extends CampaignRow {
   accountLabel: string;
   cpa: number; // cost / conversions (0 when no conversions)
+  accountBalance: number | null;
 }
 
 type SortKey =
@@ -40,7 +43,7 @@ const COLUMNS: Column[] = [
   { key: "clicks", label: "Клики", numeric: true },
   { key: "cost", label: "Расход", numeric: true },
   { key: "ctr", label: "CTR", numeric: true },
-  { key: "conversions", label: "Конверсии", numeric: true },
+  { key: "conversions", label: "Лиды", numeric: true },
   { key: "cpa", label: "CPA", numeric: true },
 ];
 
@@ -59,6 +62,7 @@ export function CampaignsTable({ accounts }: CampaignsTableProps) {
         a.rows.map((r) => ({
           ...r,
           accountLabel: a.label,
+          accountBalance: a.balance,
           cpa: r.conversions > 0 ? r.cost / r.conversions : 0,
         })),
       ),
@@ -105,7 +109,18 @@ export function CampaignsTable({ accounts }: CampaignsTableProps) {
     );
   }
 
+  const hasLowBalance = sorted.some(
+    (r) => r.accountBalance !== null && r.accountBalance < LOW_BALANCE_THRESHOLD,
+  );
+
   return (
+    <div className="space-y-2">
+    {hasLowBalance && (
+      <div className="flex items-center gap-2 text-xs text-amber-700">
+        <span className="inline-block h-3 w-3 rounded-sm bg-amber-100 ring-1 ring-amber-300" />
+        Подсвечены кампании кабинетов с балансом ниже 10 000 ₽
+      </div>
+    )}
     <div className="overflow-x-auto rounded-xl bg-white shadow-sm ring-1 ring-gray-200">
       <table className="w-full min-w-[820px] text-sm">
         <thead>
@@ -127,10 +142,23 @@ export function CampaignsTable({ accounts }: CampaignsTableProps) {
           </tr>
         </thead>
         <tbody>
-          {sorted.map((r) => (
+          {sorted.map((r) => {
+            const lowBalance =
+              r.accountBalance !== null &&
+              r.accountBalance < LOW_BALANCE_THRESHOLD;
+            return (
             <tr
               key={`${r.accountLabel}-${r.campaignId}`}
-              className="border-b border-gray-100 last:border-0 hover:bg-gray-50"
+              className={`border-b border-gray-100 last:border-0 ${
+                lowBalance
+                  ? "bg-amber-50 hover:bg-amber-100"
+                  : "hover:bg-gray-50"
+              }`}
+              title={
+                lowBalance
+                  ? "Баланс кабинета ниже 10 000 ₽"
+                  : undefined
+              }
             >
               <td className="px-4 py-3 text-gray-500">{r.accountLabel}</td>
               <td className="px-4 py-3 font-medium text-gray-900">
@@ -155,9 +183,11 @@ export function CampaignsTable({ accounts }: CampaignsTableProps) {
                 {formatCpa(r.cpa, r.conversions)}
               </td>
             </tr>
-          ))}
+            );
+          })}
         </tbody>
       </table>
+    </div>
     </div>
   );
 }

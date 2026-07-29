@@ -34,6 +34,12 @@ export default async function DashboardLayout({
               >
                 Кампании
               </Link>
+              <Link
+                href="/chart"
+                className="text-gray-600 transition hover:text-gray-900"
+              >
+                График
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-3">

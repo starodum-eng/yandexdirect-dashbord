@@ -1,8 +1,12 @@
 import { prisma } from "@/lib/prisma";
 import { getAccountById, type YandexAccount } from "@/lib/accounts";
 import { fetchAccountReport } from "@/lib/yandex/client";
+import { fetchAccountBalance } from "@/lib/yandex/balance";
 import { computeTotals } from "@/lib/yandex/report";
 import type { AccountStats, CampaignRow } from "@/types/yandex";
+
+// The report part of an account's stats (everything except the balance).
+type AccountReportStats = Omit<AccountStats, "balance">;
 
 // A snapshot is considered fresh for this many minutes. Requests within the
 // window are served from the cache; older ones trigger a refresh from the API.
@@ -20,15 +24,28 @@ interface GetAccountStatsParams {
   forceRefresh?: boolean;
 }
 
-// Returns stats for a single account, served from the cached snapshot when
-// fresh (or when the API refresh fails), otherwise refreshed from the API and
-// written back to the cache.
-export async function getAccountStats({
+// Returns stats for a single account: the report (from cache or API) and the
+// account balance, fetched in parallel. Balance failures degrade to null and
+// never affect the report.
+export async function getAccountStats(
+  params: GetAccountStatsParams,
+): Promise<AccountStats> {
+  const [report, balance] = await Promise.all([
+    getAccountReportStats(params),
+    fetchAccountBalance(params.account, params.forceRefresh ?? false),
+  ]);
+  return { ...report, balance };
+}
+
+// Returns the report part of an account's stats, served from the cached
+// snapshot when fresh (or when the API refresh fails), otherwise refreshed from
+// the API and written back to the cache.
+async function getAccountReportStats({
   account,
   dateFrom,
   dateTo,
   forceRefresh = false,
-}: GetAccountStatsParams): Promise<AccountStats> {
+}: GetAccountStatsParams): Promise<AccountReportStats> {
   const existing = await prisma.reportSnapshot.findUnique({
     where: {
       accountId_dateFrom_dateTo: {
