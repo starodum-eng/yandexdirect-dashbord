@@ -69,10 +69,19 @@ export async function GET(request: Request) {
 
   const allRows: CampaignRow[] = accounts.flatMap((a) => a.rows);
 
+  const knownBalances = accounts
+    .map((a) => a.balance)
+    .filter((b): b is number => b !== null);
+  const totalBalance =
+    knownBalances.length > 0
+      ? knownBalances.reduce((sum, b) => sum + b, 0)
+      : null;
+
   const response: StatsResponse = {
     dateFrom,
     dateTo,
     totals: computeTotals(allRows),
+    totalBalance,
     accounts,
   };
 

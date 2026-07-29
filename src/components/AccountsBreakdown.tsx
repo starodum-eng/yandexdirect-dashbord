@@ -1,11 +1,13 @@
 import type { AccountStats } from "@/types/yandex";
 import {
+  formatBalance,
   formatCpa,
   formatDateTime,
   formatInt,
   formatMoney,
   formatPercent,
 } from "@/lib/format";
+import { LOW_BALANCE_THRESHOLD } from "@/lib/constants";
 
 interface AccountsBreakdownProps {
   accounts: AccountStats[];
@@ -25,6 +27,7 @@ export function AccountsBreakdown({ accounts }: AccountsBreakdownProps) {
             <th className="px-4 py-3 text-right font-medium">CTR</th>
             <th className="px-4 py-3 text-right font-medium">Конверсии</th>
             <th className="px-4 py-3 text-right font-medium">CPA</th>
+            <th className="px-4 py-3 text-right font-medium">Баланс</th>
             <th className="px-4 py-3 text-right font-medium">Обновлено</th>
           </tr>
         </thead>
@@ -57,6 +60,15 @@ export function AccountsBreakdown({ accounts }: AccountsBreakdownProps) {
               </td>
               <td className="px-4 py-3 text-right tabular-nums">
                 {formatCpa(a.totals.cpa, a.totals.conversions)}
+              </td>
+              <td
+                className={`px-4 py-3 text-right tabular-nums ${
+                  a.balance !== null && a.balance < LOW_BALANCE_THRESHOLD
+                    ? "font-semibold text-amber-700"
+                    : ""
+                }`}
+              >
+                {formatBalance(a.balance)}
               </td>
               <td className="px-4 py-3 text-right text-xs text-gray-500">
                 {formatDateTime(a.refreshedAt)}

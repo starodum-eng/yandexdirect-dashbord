@@ -25,6 +25,13 @@ export function formatCpa(cpa: number, conversions: number): string {
   return formatMoney(cpa);
 }
 
+// Account balance. Null means the balance couldn't be retrieved (e.g. the token
+// lacks the financial permission), shown as a dash.
+export function formatBalance(balance: number | null): string {
+  if (balance === null) return "—";
+  return formatMoney(balance);
+}
+
 export function formatDateTime(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleString("ru-RU", {

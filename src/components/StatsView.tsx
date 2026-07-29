@@ -8,10 +8,11 @@ import { FilterBar } from "@/components/FilterBar";
 import { SummaryCards } from "@/components/SummaryCards";
 import { AccountsBreakdown } from "@/components/AccountsBreakdown";
 import { CampaignsTable } from "@/components/CampaignsTable";
+import { CampaignsChart } from "@/components/CampaignsChart";
 
 interface StatsViewProps {
   accounts: PublicAccount[];
-  mode: "summary" | "campaigns";
+  mode: "summary" | "campaigns" | "chart";
 }
 
 // Client-side view: owns the filter state, fetches stats, and renders either
@@ -48,22 +49,17 @@ export function StatsView({ accounts, mode }: StatsViewProps) {
 
       {data && (
         <>
-          {mode === "summary" ? (
-            <>
-              <SummaryCards totals={data.totals} />
-              <div>
-                <h2 className="mb-3 text-sm font-semibold text-gray-700">
-                  По кабинетам
-                </h2>
-                <AccountsBreakdown accounts={data.accounts} />
-              </div>
-            </>
-          ) : (
-            <>
-              <SummaryCards totals={data.totals} />
-              <CampaignsTable accounts={data.accounts} />
-            </>
+          <SummaryCards totals={data.totals} balance={data.totalBalance} />
+          {mode === "summary" && (
+            <div>
+              <h2 className="mb-3 text-sm font-semibold text-gray-700">
+                По кабинетам
+              </h2>
+              <AccountsBreakdown accounts={data.accounts} />
+            </div>
           )}
+          {mode === "campaigns" && <CampaignsTable accounts={data.accounts} />}
+          {mode === "chart" && <CampaignsChart accounts={data.accounts} />}
         </>
       )}
     </div>

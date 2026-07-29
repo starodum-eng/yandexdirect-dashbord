@@ -28,6 +28,7 @@ export interface AccountStats {
   totals: StatsTotals;
   rows: CampaignRow[];
   refreshedAt: string | null; // ISO timestamp of the cached snapshot
+  balance: number | null; // shared-account balance; null if unavailable
   error?: string; // populated if fetching this account failed
 }
 
@@ -36,5 +37,6 @@ export interface StatsResponse {
   dateFrom: string;
   dateTo: string;
   totals: StatsTotals;
+  totalBalance: number | null; // sum of known account balances; null if none known
   accounts: AccountStats[];
 }
