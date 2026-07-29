@@ -21,18 +21,18 @@ export function SummaryCards({ totals, balance }: SummaryCardsProps) {
     balance !== undefined && balance !== null && balance < LOW_BALANCE_THRESHOLD;
 
   const cards = [
+    ...(balance !== undefined
+      ? [{ label: "Баланс", value: formatBalance(balance), warn: lowBalance }]
+      : []),
     { label: "Показы", value: formatInt(totals.impressions) },
     { label: "Клики", value: formatInt(totals.clicks) },
     { label: "Расход", value: formatMoney(totals.cost) },
     { label: "CTR", value: formatPercent(totals.ctr) },
-    { label: "Конверсии", value: formatInt(totals.conversions) },
+    { label: "Лиды", value: formatInt(totals.conversions) },
     {
       label: "CPA (цена лида)",
       value: formatCpa(totals.cpa, totals.conversions),
     },
-    ...(balance !== undefined
-      ? [{ label: "Баланс", value: formatBalance(balance), warn: lowBalance }]
-      : []),
   ];
 
   return (

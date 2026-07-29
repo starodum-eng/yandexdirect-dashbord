@@ -25,7 +25,7 @@ export function AccountsBreakdown({ accounts }: AccountsBreakdownProps) {
             <th className="px-4 py-3 text-right font-medium">Клики</th>
             <th className="px-4 py-3 text-right font-medium">Расход</th>
             <th className="px-4 py-3 text-right font-medium">CTR</th>
-            <th className="px-4 py-3 text-right font-medium">Конверсии</th>
+            <th className="px-4 py-3 text-right font-medium">Лиды</th>
             <th className="px-4 py-3 text-right font-medium">CPA</th>
             <th className="px-4 py-3 text-right font-medium">Баланс</th>
             <th className="px-4 py-3 text-right font-medium">Обновлено</th>

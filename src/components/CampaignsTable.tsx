@@ -43,7 +43,7 @@ const COLUMNS: Column[] = [
   { key: "clicks", label: "Клики", numeric: true },
   { key: "cost", label: "Расход", numeric: true },
   { key: "ctr", label: "CTR", numeric: true },
-  { key: "conversions", label: "Конверсии", numeric: true },
+  { key: "conversions", label: "Лиды", numeric: true },
   { key: "cpa", label: "CPA", numeric: true },
 ];
 

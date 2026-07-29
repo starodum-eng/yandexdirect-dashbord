@@ -34,7 +34,7 @@ interface Metric {
 export const METRICS: Metric[] = [
   { key: "cost", label: "Расход", format: formatMoney },
   { key: "cpa", label: "CPA", format: formatMoney },
-  { key: "conversions", label: "Конверсии", format: formatInt },
+  { key: "conversions", label: "Лиды", format: formatInt },
   { key: "clicks", label: "Клики", format: formatInt },
   { key: "impressions", label: "Показы", format: formatInt },
   { key: "ctr", label: "CTR", format: formatPercent },
