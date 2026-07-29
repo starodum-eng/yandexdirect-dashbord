@@ -36,7 +36,7 @@ export function SummaryCards({ totals, balance }: SummaryCardsProps) {
   ];
 
   return (
-    <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(150px,1fr))]">
+    <div className="grid gap-3 [grid-template-columns:repeat(auto-fit,minmax(165px,1fr))]">
       {cards.map((c) => (
         <div
           key={c.label}
@@ -50,7 +50,7 @@ export function SummaryCards({ totals, balance }: SummaryCardsProps) {
             {c.label}
           </div>
           <div
-            className={`mt-2 text-xl font-semibold ${
+            className={`mt-2 whitespace-nowrap text-lg font-semibold ${
               "warn" in c && c.warn ? "text-amber-700" : "text-gray-900"
             }`}
           >
