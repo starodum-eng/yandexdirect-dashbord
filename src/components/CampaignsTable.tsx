@@ -2,11 +2,17 @@
 
 import { useMemo, useState } from "react";
 import type { AccountStats, CampaignRow } from "@/types/yandex";
-import { formatInt, formatMoney, formatPercent } from "@/lib/format";
+import {
+  formatCpa,
+  formatInt,
+  formatMoney,
+  formatPercent,
+} from "@/lib/format";
 
-// A campaign row enriched with its owning account label.
+// A campaign row enriched with its owning account label and derived CPA.
 interface EnrichedRow extends CampaignRow {
   accountLabel: string;
+  cpa: number; // cost / conversions (0 when no conversions)
 }
 
 type SortKey =
@@ -16,7 +22,8 @@ type SortKey =
   | "clicks"
   | "cost"
   | "ctr"
-  | "conversions";
+  | "conversions"
+  | "cpa";
 
 type SortDir = "asc" | "desc";
 
@@ -34,6 +41,7 @@ const COLUMNS: Column[] = [
   { key: "cost", label: "Расход", numeric: true },
   { key: "ctr", label: "CTR", numeric: true },
   { key: "conversions", label: "Конверсии", numeric: true },
+  { key: "cpa", label: "CPA", numeric: true },
 ];
 
 interface CampaignsTableProps {
@@ -48,7 +56,11 @@ export function CampaignsTable({ accounts }: CampaignsTableProps) {
   const rows = useMemo<EnrichedRow[]>(
     () =>
       accounts.flatMap((a) =>
-        a.rows.map((r) => ({ ...r, accountLabel: a.label })),
+        a.rows.map((r) => ({
+          ...r,
+          accountLabel: a.label,
+          cpa: r.conversions > 0 ? r.cost / r.conversions : 0,
+        })),
       ),
     [accounts],
   );
@@ -138,6 +150,9 @@ export function CampaignsTable({ accounts }: CampaignsTableProps) {
               </td>
               <td className="px-4 py-3 text-right tabular-nums">
                 {formatInt(r.conversions)}
+              </td>
+              <td className="px-4 py-3 text-right tabular-nums">
+                {formatCpa(r.cpa, r.conversions)}
               </td>
             </tr>
           ))}

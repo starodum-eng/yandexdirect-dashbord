@@ -77,11 +77,15 @@ export function computeTotals(rows: CampaignRow[]): StatsTotals {
   const ctr =
     totals.impressions > 0 ? (totals.clicks / totals.impressions) * 100 : 0;
 
+  const cpa =
+    totals.conversions > 0 ? totals.cost / totals.conversions : 0;
+
   return {
     impressions: totals.impressions,
     clicks: totals.clicks,
     cost: Math.round(totals.cost * 100) / 100,
     ctr: Math.round(ctr * 100) / 100,
     conversions: totals.conversions,
+    cpa: Math.round(cpa * 100) / 100,
   };
 }

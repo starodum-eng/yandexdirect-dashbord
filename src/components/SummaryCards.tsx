@@ -1,11 +1,16 @@
 import type { StatsTotals } from "@/types/yandex";
-import { formatInt, formatMoney, formatPercent } from "@/lib/format";
+import {
+  formatCpa,
+  formatInt,
+  formatMoney,
+  formatPercent,
+} from "@/lib/format";
 
 interface SummaryCardsProps {
   totals: StatsTotals;
 }
 
-// KPI row: impressions, clicks, cost, CTR, conversions.
+// KPI row: impressions, clicks, cost, CTR, conversions, CPA.
 export function SummaryCards({ totals }: SummaryCardsProps) {
   const cards = [
     { label: "Показы", value: formatInt(totals.impressions) },
@@ -13,10 +18,11 @@ export function SummaryCards({ totals }: SummaryCardsProps) {
     { label: "Расход", value: formatMoney(totals.cost) },
     { label: "CTR", value: formatPercent(totals.ctr) },
     { label: "Конверсии", value: formatInt(totals.conversions) },
+    { label: "CPA (цена лида)", value: formatCpa(totals.cpa, totals.conversions) },
   ];
 
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
       {cards.map((c) => (
         <div
           key={c.label}
