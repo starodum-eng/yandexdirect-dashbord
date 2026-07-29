@@ -38,13 +38,23 @@ export function parseReportTsv(tsv: string): CampaignRow[] {
   const idxClicks = col("Clicks");
   const idxCost = col("Cost");
   const idxCtr = col("Ctr");
-  const idxConversions = col("Conversions");
+  // Conversions may be a single "Conversions" column (all goals) or several
+  // "Conversions_<goalId>_<model>" columns when specific goals are requested.
+  // Sum every column whose header starts with "Conversions".
+  const idxConversions = header
+    .map((name, i) => (name.startsWith("Conversions") ? i : -1))
+    .filter((i) => i >= 0);
 
   const rows: CampaignRow[] = [];
   for (let i = headerIdx + 1; i < lines.length; i++) {
     const cells = lines[i].split("\t");
     // Skip the trailing "Total rows" summary line produced by the API.
     if (cells[0] === "Total rows" || cells.length < header.length) continue;
+
+    const conversions = idxConversions.reduce(
+      (sum, idx) => sum + toNumber(cells[idx]),
+      0,
+    );
 
     rows.push({
       campaignId: cells[idxCampaignId] ?? "",
@@ -53,7 +63,7 @@ export function parseReportTsv(tsv: string): CampaignRow[] {
       clicks: toNumber(cells[idxClicks]),
       cost: toNumber(cells[idxCost]),
       ctr: toNumber(cells[idxCtr]),
-      conversions: toNumber(cells[idxConversions]),
+      conversions,
     });
   }
 

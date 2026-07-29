@@ -15,6 +15,11 @@ import { z } from "zod";
 // The <KEY> segment (e.g. ACC1) becomes the account id, lower-cased, and is
 // used as the cache key for report snapshots. Keep it stable once chosen.
 //
+// Optional — restrict "leads" to specific Metrica goals (otherwise all
+// conversions are counted):
+//   YANDEX_ACCOUNT_ACC1_GOALS=12345,67890   (per account)
+//   YANDEX_LEAD_GOALS=12345,67890           (global fallback for all accounts)
+//
 // Legacy format — a single JSON array (still supported for backward
 // compatibility, merged with the per-account variables):
 //
@@ -24,6 +29,8 @@ const accountSchema = z.object({
   id: z.string().min(1),
   label: z.string().min(1),
   token: z.string().min(1),
+  // Metrica goal ids counted as "leads". Empty = count all conversions.
+  goals: z.array(z.number().int().positive()).default([]),
 });
 
 const accountsSchema = z.array(accountSchema);
@@ -38,9 +45,24 @@ const TOKEN_VAR_RE = /^YANDEX_ACCOUNT_(.+)_TOKEN$/;
 
 let cached: YandexAccount[] | null = null;
 
+// Parses a comma-separated list of positive integer goal ids.
+function parseGoals(raw: string | undefined): number[] {
+  if (!raw) return [];
+  return raw
+    .split(",")
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isInteger(n) && n > 0);
+}
+
+// Global fallback list of lead goal ids, used when an account has no own list.
+function globalLeadGoals(): number[] {
+  return parseGoals(process.env.YANDEX_LEAD_GOALS);
+}
+
 // Reads accounts declared as one set of variables per account.
 function parsePerAccountVars(): YandexAccount[] {
   const accounts: YandexAccount[] = [];
+  const fallback = globalLeadGoals();
 
   for (const [key, value] of Object.entries(process.env)) {
     const match = key.match(TOKEN_VAR_RE);
@@ -51,8 +73,14 @@ function parsePerAccountVars(): YandexAccount[] {
 
     const rawKey = match[1]; // e.g. "ACC1" or "CLIENT_A"
     const label = process.env[`YANDEX_ACCOUNT_${rawKey}_LABEL`]?.trim() || rawKey;
+    const own = parseGoals(process.env[`YANDEX_ACCOUNT_${rawKey}_GOALS`]);
 
-    accounts.push({ id: rawKey.toLowerCase(), label, token });
+    accounts.push({
+      id: rawKey.toLowerCase(),
+      label,
+      token,
+      goals: own.length > 0 ? own : fallback,
+    });
   }
 
   return accounts;
@@ -75,7 +103,12 @@ function parseLegacyJson(): YandexAccount[] {
     throw new Error(`YANDEX_ACCOUNTS is invalid: ${result.error.message}`);
   }
 
-  return result.data;
+  // Apply the global lead-goals fallback to legacy entries without their own.
+  const fallback = globalLeadGoals();
+  return result.data.map((a) => ({
+    ...a,
+    goals: a.goals.length > 0 ? a.goals : fallback,
+  }));
 }
 
 // Reads and validates the configured accounts from both formats. Per-account
