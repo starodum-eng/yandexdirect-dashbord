@@ -18,6 +18,7 @@ export interface StatsTotals {
   cost: number;
   ctr: number; // recomputed from totals: clicks / impressions * 100
   conversions: number;
+  cpa: number; // cost per acquisition: cost / conversions (0 when no conversions)
 }
 
 // Per-account result returned by the stats API.

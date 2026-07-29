@@ -3,7 +3,7 @@
 import { useState } from "react";
 import type { PublicAccount } from "@/lib/accounts";
 import { useStats, type StatsFilters } from "@/hooks/useStats";
-import { isoDaysAgo, todayIso } from "@/lib/format";
+import { presetRange } from "@/lib/dateRanges";
 import { FilterBar } from "@/components/FilterBar";
 import { SummaryCards } from "@/components/SummaryCards";
 import { AccountsBreakdown } from "@/components/AccountsBreakdown";
@@ -18,8 +18,7 @@ interface StatsViewProps {
 // the overview (KPI cards + per-account breakdown) or the campaigns table.
 export function StatsView({ accounts, mode }: StatsViewProps) {
   const [filters, setFilters] = useState<StatsFilters>({
-    dateFrom: isoDaysAgo(30),
-    dateTo: todayIso(),
+    ...presetRange("last30"),
     account: "all",
   });
 

@@ -18,6 +18,13 @@ export function formatPercent(n: number): string {
   return `${n.toLocaleString("ru-RU", { maximumFractionDigits: 2 })} %`;
 }
 
+// CPA (cost per acquisition). Shows a dash when there are no conversions,
+// since cost-per-nothing is undefined rather than zero.
+export function formatCpa(cpa: number, conversions: number): string {
+  if (conversions <= 0) return "—";
+  return formatMoney(cpa);
+}
+
 export function formatDateTime(iso: string | null): string {
   if (!iso) return "—";
   return new Date(iso).toLocaleString("ru-RU", {
@@ -27,15 +34,4 @@ export function formatDateTime(iso: string | null): string {
     hour: "2-digit",
     minute: "2-digit",
   });
-}
-
-// Returns YYYY-MM-DD for a date offset by `days` from today.
-export function isoDaysAgo(days: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() - days);
-  return d.toISOString().slice(0, 10);
-}
-
-export function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
 }

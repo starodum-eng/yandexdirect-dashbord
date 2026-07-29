@@ -16,9 +16,9 @@ export default async function DashboardLayout({
   return (
     <div className="min-h-screen">
       <header className="border-b border-gray-200 bg-white">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3">
-          <div className="flex items-center gap-6">
-            <span className="text-base font-semibold text-gray-900">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3">
+          <div className="flex items-center gap-4 sm:gap-6">
+            <span className="text-sm font-semibold text-gray-900 sm:text-base">
               Яндекс.Директ · Дашборд
             </span>
             <nav className="flex items-center gap-4 text-sm">
