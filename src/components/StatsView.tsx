@@ -8,6 +8,7 @@ import { FilterBar } from "@/components/FilterBar";
 import { SummaryCards } from "@/components/SummaryCards";
 import { AccountsBreakdown } from "@/components/AccountsBreakdown";
 import { CampaignsTable } from "@/components/CampaignsTable";
+import { AccountsChart } from "@/components/AccountsChart";
 import { CampaignsChart } from "@/components/CampaignsChart";
 
 interface StatsViewProps {
@@ -59,7 +60,12 @@ export function StatsView({ accounts, mode }: StatsViewProps) {
             </div>
           )}
           {mode === "campaigns" && <CampaignsTable accounts={data.accounts} />}
-          {mode === "chart" && <CampaignsChart accounts={data.accounts} />}
+          {mode === "chart" && (
+            <>
+              <AccountsChart accounts={data.accounts} />
+              <CampaignsChart accounts={data.accounts} />
+            </>
+          )}
         </>
       )}
     </div>
