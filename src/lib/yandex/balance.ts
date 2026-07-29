@@ -59,7 +59,8 @@ async function requestBalance(account: YandexAccount): Promise<number | null> {
 }
 
 // Live v4 responds with { data: { Accounts: [{ Amount, ... }] } } on success,
-// or { error_code, error_str } on failure. Parse defensively.
+// or { error_code, error_str } on failure. Note: Amount comes back as a STRING
+// (e.g. "16240.03"), so it must be coerced. Parse defensively.
 function extractAmount(json: unknown): number | null {
   if (!json || typeof json !== "object") return null;
   const data = (json as { data?: unknown }).data;
@@ -68,6 +69,15 @@ function extractAmount(json: unknown): number | null {
   const accounts = (data as { Accounts?: unknown }).Accounts;
   if (!Array.isArray(accounts) || accounts.length === 0) return null;
 
-  const amount = (accounts[0] as { Amount?: unknown }).Amount;
-  return typeof amount === "number" && Number.isFinite(amount) ? amount : null;
+  return toNumber((accounts[0] as { Amount?: unknown }).Amount);
+}
+
+// Coerces the API's numeric-or-string amount into a finite number, or null.
+function toNumber(value: unknown): number | null {
+  if (typeof value === "number") return Number.isFinite(value) ? value : null;
+  if (typeof value === "string") {
+    const n = Number(value.trim().replace(",", "."));
+    return Number.isFinite(n) ? n : null;
+  }
+  return null;
 }
