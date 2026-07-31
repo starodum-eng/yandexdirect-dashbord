@@ -41,3 +41,16 @@ model ReportSnapshot {
   @@unique([accountId, dateFrom, dateTo])
   @@index([accountId])
 }
+
+// A stored AI anomaly-analysis run. Used both to display the latest result and
+// to rate-limit the "Анализ" button to at most once per day.
+model AnalysisRun {
+  id        String   @id @default(cuid())
+  result    String // Markdown produced by the model
+  dateFrom  String // analysed period
+  dateTo    String
+  model     String // Gemini model used
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+}
