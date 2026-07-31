@@ -40,6 +40,12 @@ export default async function DashboardLayout({
               >
                 График
               </Link>
+              <Link
+                href="/anomalies"
+                className="text-gray-600 transition hover:text-gray-900"
+              >
+                Аномалии
+              </Link>
             </nav>
           </div>
           <div className="flex items-center gap-3">
