@@ -1,7 +1,9 @@
 // Minimal client for the Google Gemini API (Google AI Studio key).
 // Used only server-side; the API key never reaches the browser.
 
-const DEFAULT_MODEL = process.env.GEMINI_MODEL ?? "gemini-2.5-flash";
+// Evergreen alias that tracks the current stable Flash model. Override with
+// GEMINI_MODEL if a specific model is needed (see GET /api/anomalies/models).
+const DEFAULT_MODEL = process.env.GEMINI_MODEL ?? "gemini-flash-latest";
 
 export class GeminiError extends Error {
   constructor(message: string) {
@@ -20,8 +22,17 @@ interface GenerateParams {
   temperature?: number;
 }
 
-// Calls generateContent and returns the model's text. Throws GeminiError on any
-// failure so the caller can surface a friendly message.
+// Transient statuses worth retrying (overload / rate limit / server error).
+const RETRYABLE = new Set([429, 500, 503]);
+const MAX_ATTEMPTS = 3;
+const BACKOFF_MS = [2000, 5000]; // waits between attempts
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+// Calls generateContent and returns the model's text. Retries transient
+// overload errors (503/429/500) with backoff. Throws GeminiError on failure.
 export async function generateText({
   system,
   prompt,
@@ -37,16 +48,67 @@ export async function generateText({
     model,
   )}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    cache: "no-store",
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: system }] },
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { temperature },
-    }),
-  });
+  let lastDetail = "";
+  let lastStatus = 0;
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: system }] },
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature },
+      }),
+    });
+
+    if (res.ok) {
+      const json: unknown = await res.json();
+      const text = extractText(json);
+      if (!text) throw new GeminiError("Пустой ответ модели.");
+      return text;
+    }
+
+    lastStatus = res.status;
+    lastDetail = await res.text().catch(() => "");
+
+    // Retry transient errors; fail fast on everything else (e.g. 404 model).
+    if (RETRYABLE.has(res.status) && attempt < MAX_ATTEMPTS - 1) {
+      await sleep(BACKOFF_MS[attempt] ?? 5000);
+      continue;
+    }
+    break;
+  }
+
+  const hint = lastStatus === 503 ? " Модель временно перегружена, попробуйте позже." : "";
+  throw new GeminiError(
+    `Gemini API error (${lastStatus}): ${lastDetail.slice(0, 300)}${hint}`,
+  );
+}
+
+export function activeModel(): string {
+  return DEFAULT_MODEL;
+}
+
+export interface ModelInfo {
+  name: string; // model id without the "models/" prefix
+  displayName?: string;
+}
+
+// Lists models available to the configured key that support generateContent.
+// Runs server-side (Vercel), so it works even where direct API calls from the
+// user's own location are geo-restricted. Throws GeminiError on failure.
+export async function listModels(): Promise<ModelInfo[]> {
+  const apiKey = process.env.GEMINI_API_KEY;
+  if (!apiKey) {
+    throw new GeminiError("GEMINI_API_KEY is not set.");
+  }
+
+  const url = `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(
+    apiKey,
+  )}`;
+  const res = await fetch(url, { cache: "no-store" });
 
   if (!res.ok) {
     const detail = await res.text().catch(() => "");
@@ -56,15 +118,22 @@ export async function generateText({
   }
 
   const json: unknown = await res.json();
-  const text = extractText(json);
-  if (!text) {
-    throw new GeminiError("Пустой ответ модели.");
-  }
-  return text;
-}
+  const models = (json as { models?: unknown }).models;
+  if (!Array.isArray(models)) return [];
 
-export function activeModel(): string {
-  return DEFAULT_MODEL;
+  return models
+    .filter((m) => {
+      const methods = (m as { supportedGenerationMethods?: unknown })
+        .supportedGenerationMethods;
+      return Array.isArray(methods) && methods.includes("generateContent");
+    })
+    .map((m) => {
+      const raw = String((m as { name?: unknown }).name ?? "");
+      return {
+        name: raw.replace(/^models\//, ""),
+        displayName: (m as { displayName?: string }).displayName,
+      };
+    });
 }
 
 // Pulls candidates[0].content.parts[*].text out of the response.
