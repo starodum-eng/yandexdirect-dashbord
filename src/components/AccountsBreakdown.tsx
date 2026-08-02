@@ -29,6 +29,7 @@ export function AccountsBreakdown({ accounts }: AccountsBreakdownProps) {
             <th className="px-4 py-3 text-right font-medium">CPA</th>
             <th className="px-4 py-3 text-right font-medium">Баланс</th>
             <th className="px-4 py-3 text-right font-medium">Обновлено</th>
+            <th className="px-4 py-3 text-right font-medium">ID</th>
           </tr>
         </thead>
         <tbody>
@@ -72,6 +73,9 @@ export function AccountsBreakdown({ accounts }: AccountsBreakdownProps) {
               </td>
               <td className="px-4 py-3 text-right text-xs text-gray-500">
                 {formatDateTime(a.refreshedAt)}
+              </td>
+              <td className="px-4 py-3 text-right font-mono text-xs text-gray-500">
+                {a.accountId}
               </td>
             </tr>
           ))}
