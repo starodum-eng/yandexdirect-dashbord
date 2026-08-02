@@ -22,8 +22,17 @@ interface GenerateParams {
   temperature?: number;
 }
 
-// Calls generateContent and returns the model's text. Throws GeminiError on any
-// failure so the caller can surface a friendly message.
+// Transient statuses worth retrying (overload / rate limit / server error).
+const RETRYABLE = new Set([429, 500, 503]);
+const MAX_ATTEMPTS = 3;
+const BACKOFF_MS = [2000, 5000]; // waits between attempts
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
+// Calls generateContent and returns the model's text. Retries transient
+// overload errors (503/429/500) with backoff. Throws GeminiError on failure.
 export async function generateText({
   system,
   prompt,
@@ -39,30 +48,43 @@ export async function generateText({
     model,
   )}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
-  const res = await fetch(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    cache: "no-store",
-    body: JSON.stringify({
-      system_instruction: { parts: [{ text: system }] },
-      contents: [{ role: "user", parts: [{ text: prompt }] }],
-      generationConfig: { temperature },
-    }),
-  });
+  let lastDetail = "";
+  let lastStatus = 0;
 
-  if (!res.ok) {
-    const detail = await res.text().catch(() => "");
-    throw new GeminiError(
-      `Gemini API error (${res.status}): ${detail.slice(0, 300)}`,
-    );
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+    const res = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      cache: "no-store",
+      body: JSON.stringify({
+        system_instruction: { parts: [{ text: system }] },
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: { temperature },
+      }),
+    });
+
+    if (res.ok) {
+      const json: unknown = await res.json();
+      const text = extractText(json);
+      if (!text) throw new GeminiError("Пустой ответ модели.");
+      return text;
+    }
+
+    lastStatus = res.status;
+    lastDetail = await res.text().catch(() => "");
+
+    // Retry transient errors; fail fast on everything else (e.g. 404 model).
+    if (RETRYABLE.has(res.status) && attempt < MAX_ATTEMPTS - 1) {
+      await sleep(BACKOFF_MS[attempt] ?? 5000);
+      continue;
+    }
+    break;
   }
 
-  const json: unknown = await res.json();
-  const text = extractText(json);
-  if (!text) {
-    throw new GeminiError("Пустой ответ модели.");
-  }
-  return text;
+  const hint = lastStatus === 503 ? " Модель временно перегружена, попробуйте позже." : "";
+  throw new GeminiError(
+    `Gemini API error (${lastStatus}): ${lastDetail.slice(0, 300)}${hint}`,
+  );
 }
 
 export function activeModel(): string {
