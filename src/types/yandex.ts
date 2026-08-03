@@ -33,6 +33,33 @@ export interface AccountStats {
   error?: string; // populated if fetching this account failed
 }
 
+// One row of the search-query report (per campaign + search query).
+export interface SearchQueryRow {
+  campaignName: string;
+  query: string;
+  impressions: number;
+  clicks: number;
+  cost: number;
+  conversions: number; // leads
+}
+
+// Per-account search-query result.
+export interface AccountSearchQueries {
+  accountId: string;
+  label: string;
+  client: string | null;
+  rows: SearchQueryRow[];
+  refreshedAt: string | null;
+  error?: string;
+}
+
+// Full response of GET /api/search-queries.
+export interface SearchQueriesResponse {
+  dateFrom: string;
+  dateTo: string;
+  accounts: AccountSearchQueries[];
+}
+
 // Full response of GET /api/stats.
 export interface StatsResponse {
   dateFrom: string;
