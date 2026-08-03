@@ -1,6 +1,11 @@
 import type { YandexAccount } from "@/lib/accounts";
-import type { CampaignRow } from "@/types/yandex";
-import { REPORT_FIELDS, parseReportTsv } from "./report";
+import type { CampaignRow, SearchQueryRow } from "@/types/yandex";
+import {
+  REPORT_FIELDS,
+  SEARCH_QUERY_FIELDS,
+  parseReportTsv,
+  parseSearchQueryTsv,
+} from "./report";
 
 const REPORTS_ENDPOINT = "https://api.direct.yandex.com/json/v5/reports";
 
@@ -31,15 +36,22 @@ interface FetchReportParams {
   dateTo: string; // YYYY-MM-DD
 }
 
-// Requests a CUSTOM_REPORT from the Yandex.Direct Reports API v5 for a single
-// account. Handles the asynchronous report lifecycle: the API answers with
-// 201/202 while the report is still being prepared, and 200 with the TSV body
-// once it is ready. Runs entirely on the server; the token never leaves here.
-export async function fetchAccountReport({
+interface RequestReportParams extends FetchReportParams {
+  reportType: string;
+  fieldNames: readonly string[];
+}
+
+// Requests a report from the Yandex.Direct Reports API v5 for a single account
+// and returns the raw TSV body. Handles the asynchronous report lifecycle: the
+// API answers 201/202 while the report is being prepared, and 200 with the TSV
+// once ready. Runs entirely on the server; the token never leaves here.
+async function requestReportTsv({
   account,
   dateFrom,
   dateTo,
-}: FetchReportParams): Promise<CampaignRow[]> {
+  reportType,
+  fieldNames,
+}: RequestReportParams): Promise<string> {
   // When the account restricts leads to specific goals, request per-goal
   // conversion columns (Conversions_<goalId>_<model>) for those goals; the
   // report parser sums them. Without goals, the aggregated Conversions column
@@ -56,9 +68,9 @@ export async function fetchAccountReport({
         DateTo: dateTo,
       },
       ...goalParams,
-      FieldNames: REPORT_FIELDS,
-      ReportName: `report_${account.id}_${dateFrom}_${dateTo}_${Date.now()}`,
-      ReportType: "CUSTOM_REPORT",
+      FieldNames: fieldNames,
+      ReportName: `${reportType}_${account.id}_${dateFrom}_${dateTo}_${Date.now()}`,
+      ReportType: reportType,
       DateRangeType: "CUSTOM_DATE",
       Format: "TSV",
       IncludeVAT: "YES",
@@ -85,8 +97,7 @@ export async function fetchAccountReport({
     });
 
     if (res.status === 200) {
-      const text = await res.text();
-      return parseReportTsv(text);
+      return res.text();
     }
 
     // Report is being prepared — wait as suggested by retryIn (seconds) header.
@@ -108,4 +119,28 @@ export async function fetchAccountReport({
   throw new YandexApiError(
     `Report for account ${account.id} was not ready after ${MAX_POLL_ATTEMPTS} attempts.`,
   );
+}
+
+// Per-campaign statistics (CUSTOM_REPORT).
+export async function fetchAccountReport(
+  params: FetchReportParams,
+): Promise<CampaignRow[]> {
+  const tsv = await requestReportTsv({
+    ...params,
+    reportType: "CUSTOM_REPORT",
+    fieldNames: REPORT_FIELDS,
+  });
+  return parseReportTsv(tsv);
+}
+
+// Per-search-query statistics (SEARCH_QUERY_PERFORMANCE_REPORT).
+export async function fetchAccountSearchQueries(
+  params: FetchReportParams,
+): Promise<SearchQueryRow[]> {
+  const tsv = await requestReportTsv({
+    ...params,
+    reportType: "SEARCH_QUERY_PERFORMANCE_REPORT",
+    fieldNames: SEARCH_QUERY_FIELDS,
+  });
+  return parseSearchQueryTsv(tsv);
 }

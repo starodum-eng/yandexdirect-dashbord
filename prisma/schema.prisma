@@ -42,6 +42,20 @@ model ReportSnapshot {
   @@index([accountId])
 }
 
+// A cached snapshot of the search-query report (SEARCH_QUERY_PERFORMANCE_REPORT)
+// for a single account and date range. `rows` holds SearchQueryRow[] as JSON.
+model SearchQuerySnapshot {
+  id          String   @id @default(cuid())
+  accountId   String
+  dateFrom    String
+  dateTo      String
+  rows        Json
+  refreshedAt DateTime @default(now())
+
+  @@unique([accountId, dateFrom, dateTo])
+  @@index([accountId])
+}
+
 // A stored AI anomaly-analysis run. Used both to display the latest result and
 // to rate-limit the "Анализ" button to at most once per day.
 model AnalysisRun {

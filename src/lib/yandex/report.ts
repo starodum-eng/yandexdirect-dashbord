@@ -1,4 +1,8 @@
-import type { CampaignRow, StatsTotals } from "@/types/yandex";
+import type {
+  CampaignRow,
+  SearchQueryRow,
+  StatsTotals,
+} from "@/types/yandex";
 
 // Field order requested from the Reports API. Must match the header row of the
 // returned TSV report.
@@ -9,6 +13,16 @@ export const REPORT_FIELDS = [
   "Clicks",
   "Cost",
   "Ctr",
+  "Conversions",
+] as const;
+
+// Fields for the SEARCH_QUERY_PERFORMANCE_REPORT.
+export const SEARCH_QUERY_FIELDS = [
+  "CampaignName",
+  "Query",
+  "Impressions",
+  "Clicks",
+  "Cost",
   "Conversions",
 ] as const;
 
@@ -98,4 +112,50 @@ export function computeTotals(rows: CampaignRow[]): StatsTotals {
     conversions: totals.conversions,
     cpa: Math.round(cpa * 100) / 100,
   };
+}
+
+// Parses the TSV body of a SEARCH_QUERY_PERFORMANCE_REPORT into rows. As with
+// campaigns, conversions may arrive as a single "Conversions" column or several
+// "Conversions_<goalId>_<model>" columns (when goals are configured) — summed.
+export function parseSearchQueryTsv(tsv: string): SearchQueryRow[] {
+  const lines = tsv.split("\n").filter((l) => l.trim() !== "");
+  if (lines.length === 0) return [];
+
+  const headerIdx = lines.findIndex((l) => {
+    const cells = l.split("\t");
+    return cells.includes("Query") && cells.includes("CampaignName");
+  });
+  if (headerIdx === -1) return [];
+
+  const header = lines[headerIdx].split("\t");
+  const idxCampaign = header.indexOf("CampaignName");
+  const idxQuery = header.indexOf("Query");
+  const idxImpressions = header.indexOf("Impressions");
+  const idxClicks = header.indexOf("Clicks");
+  const idxCost = header.indexOf("Cost");
+  const idxConversions = header
+    .map((name, i) => (name.startsWith("Conversions") ? i : -1))
+    .filter((i) => i >= 0);
+
+  const rows: SearchQueryRow[] = [];
+  for (let i = headerIdx + 1; i < lines.length; i++) {
+    const cells = lines[i].split("\t");
+    if (cells[0] === "Total rows" || cells.length < header.length) continue;
+
+    const conversions = idxConversions.reduce(
+      (sum, idx) => sum + toNumber(cells[idx]),
+      0,
+    );
+
+    rows.push({
+      campaignName: cells[idxCampaign] ?? "",
+      query: cells[idxQuery] ?? "",
+      impressions: toNumber(cells[idxImpressions]),
+      clicks: toNumber(cells[idxClicks]),
+      cost: toNumber(cells[idxCost]),
+      conversions,
+    });
+  }
+
+  return rows;
 }

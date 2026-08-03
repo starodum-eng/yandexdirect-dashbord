@@ -35,6 +35,12 @@ export default async function DashboardLayout({
                 Кампании
               </Link>
               <Link
+                href="/queries"
+                className="text-gray-600 transition hover:text-gray-900"
+              >
+                ПЗ
+              </Link>
+              <Link
                 href="/chart"
                 className="text-gray-600 transition hover:text-gray-900"
               >
