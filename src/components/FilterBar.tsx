@@ -26,6 +26,21 @@ export function FilterBar({
     dateTo: filters.dateTo,
   });
 
+  // Distinct client names for the client filter.
+  const clients = [
+    ...new Set(
+      accounts
+        .map((a) => a.client)
+        .filter((c): c is string => Boolean(c)),
+    ),
+  ].sort((a, b) => a.localeCompare(b, "ru"));
+
+  // Account options narrow to the selected client.
+  const accountOptions =
+    filters.client === "all"
+      ? accounts
+      : accounts.filter((a) => a.client === filters.client);
+
   return (
     <div className="space-y-3 rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-200">
       {/* Quick presets — wrap and scroll-free on small screens */}
@@ -80,6 +95,29 @@ export function FilterBar({
           </div>
         </div>
 
+        {clients.length > 0 && (
+          <div className="flex flex-col sm:flex-none">
+            <label className="mb-1 text-xs font-medium text-gray-500">
+              Клиент
+            </label>
+            <select
+              value={filters.client}
+              onChange={(e) =>
+                // Changing client resets the account filter to "all".
+                onChange({ ...filters, client: e.target.value, account: "all" })
+              }
+              className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-dark sm:w-auto"
+            >
+              <option value="all">Все клиенты</option>
+              {clients.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
         <div className="flex flex-col sm:flex-none">
           <label className="mb-1 text-xs font-medium text-gray-500">
             Кабинет
@@ -90,7 +128,7 @@ export function FilterBar({
             className="w-full rounded-lg border border-gray-300 px-3 py-2 text-sm outline-none focus:border-brand-dark sm:w-auto"
           >
             <option value="all">Все кабинеты</option>
-            {accounts.map((a) => (
+            {accountOptions.map((a) => (
               <option key={a.id} value={a.id}>
                 {a.label}
               </option>

@@ -7,6 +7,7 @@ export interface StatsFilters {
   dateFrom: string;
   dateTo: string;
   account: string; // "all" or account id
+  client: string; // "all" or client name
 }
 
 interface UseStatsResult {
@@ -33,6 +34,7 @@ export function useStats(filters: StatsFilters): UseStatsResult {
           dateFrom: filters.dateFrom,
           dateTo: filters.dateTo,
           account: filters.account,
+          client: filters.client,
           refresh: forceRefresh ? "true" : "false",
         });
         const res = await fetch(`/api/stats?${params.toString()}`);
@@ -48,7 +50,7 @@ export function useStats(filters: StatsFilters): UseStatsResult {
         setLoading(false);
       }
     },
-    [filters.dateFrom, filters.dateTo, filters.account],
+    [filters.dateFrom, filters.dateTo, filters.account, filters.client],
   );
 
   useEffect(() => {

@@ -5,8 +5,8 @@ import { fetchAccountBalance } from "@/lib/yandex/balance";
 import { computeTotals } from "@/lib/yandex/report";
 import type { AccountStats, CampaignRow } from "@/types/yandex";
 
-// The report part of an account's stats (everything except the balance).
-type AccountReportStats = Omit<AccountStats, "balance">;
+// The report part of an account's stats (everything except balance and client).
+type AccountReportStats = Omit<AccountStats, "balance" | "client">;
 
 // A snapshot is considered fresh for this many minutes. Requests within the
 // window are served from the cache; older ones trigger a refresh from the API.
@@ -34,7 +34,7 @@ export async function getAccountStats(
     getAccountReportStats(params),
     fetchAccountBalance(params.account, params.forceRefresh ?? false),
   ]);
-  return { ...report, balance };
+  return { ...report, balance, client: params.account.client };
 }
 
 // Returns the report part of an account's stats, served from the cached

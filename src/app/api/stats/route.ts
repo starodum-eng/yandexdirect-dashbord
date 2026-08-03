@@ -15,6 +15,8 @@ const querySchema = z.object({
   dateTo: isoDate,
   // "all" or a specific account id.
   account: z.string().default("all"),
+  // "all" or a specific client name.
+  client: z.string().default("all"),
   refresh: z.enum(["true", "false"]).default("false"),
 });
 
@@ -31,6 +33,7 @@ export async function GET(request: Request) {
     dateFrom: searchParams.get("dateFrom"),
     dateTo: searchParams.get("dateTo"),
     account: searchParams.get("account") ?? "all",
+    client: searchParams.get("client") ?? "all",
     refresh: searchParams.get("refresh") ?? "false",
   });
 
@@ -41,7 +44,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const { dateFrom, dateTo, account, refresh } = parsed.data;
+  const { dateFrom, dateTo, account, client, refresh } = parsed.data;
 
   if (dateFrom > dateTo) {
     return NextResponse.json(
@@ -50,14 +53,15 @@ export async function GET(request: Request) {
     );
   }
 
+  // Filter accounts by client, then by a specific account.
   const allAccounts = getAccounts();
-  const accountIds =
-    account === "all"
-      ? allAccounts.map((a) => a.id)
-      : allAccounts.filter((a) => a.id === account).map((a) => a.id);
+  const accountIds = allAccounts
+    .filter((a) => client === "all" || a.client === client)
+    .filter((a) => account === "all" || a.id === account)
+    .map((a) => a.id);
 
   if (accountIds.length === 0) {
-    return NextResponse.json({ error: "Unknown account" }, { status: 400 });
+    return NextResponse.json({ error: "No matching accounts" }, { status: 400 });
   }
 
   const accounts = await getStatsForAccounts({

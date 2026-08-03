@@ -35,10 +35,14 @@ const accountSchema = z.object({
 
 const accountsSchema = z.array(accountSchema);
 
-export type YandexAccount = z.infer<typeof accountSchema>;
+// Account as declared in env, before the client name is attached.
+type BaseAccount = z.infer<typeof accountSchema>;
+
+// A configured account, with its client (owner) resolved from YANDEX_CLIENTS.
+export type YandexAccount = BaseAccount & { client: string | null };
 
 // Account exposed to the client — WITHOUT the token.
-export type PublicAccount = Pick<YandexAccount, "id" | "label">;
+export type PublicAccount = Pick<YandexAccount, "id" | "label" | "client">;
 
 // Matches YANDEX_ACCOUNT_<KEY>_TOKEN and captures <KEY>.
 const TOKEN_VAR_RE = /^YANDEX_ACCOUNT_(.+)_TOKEN$/;
@@ -59,9 +63,32 @@ function globalLeadGoals(): number[] {
   return parseGoals(process.env.YANDEX_LEAD_GOALS);
 }
 
+// Parses the account -> client map from YANDEX_CLIENTS. One entry per line
+// (also accepts ";" separators): "<accountId>=<Client name>". Account ids are
+// lower-cased to match. Example:
+//   acc1=Лесорубы
+//   acc2=Скуд
+//   acc3=Лесорубы
+function parseClients(raw: string | undefined): Map<string, string> {
+  const map = new Map<string, string>();
+  if (!raw) return map;
+
+  for (const line of raw.split(/[\n;]+/)) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+    const eq = trimmed.indexOf("=");
+    if (eq === -1) continue;
+    const id = trimmed.slice(0, eq).trim().toLowerCase();
+    const name = trimmed.slice(eq + 1).trim();
+    if (id && name) map.set(id, name);
+  }
+
+  return map;
+}
+
 // Reads accounts declared as one set of variables per account.
-function parsePerAccountVars(): YandexAccount[] {
-  const accounts: YandexAccount[] = [];
+function parsePerAccountVars(): BaseAccount[] {
+  const accounts: BaseAccount[] = [];
   const fallback = globalLeadGoals();
 
   for (const [key, value] of Object.entries(process.env)) {
@@ -87,7 +114,7 @@ function parsePerAccountVars(): YandexAccount[] {
 }
 
 // Reads accounts declared in the legacy single-JSON variable.
-function parseLegacyJson(): YandexAccount[] {
+function parseLegacyJson(): BaseAccount[] {
   const raw = process.env.YANDEX_ACCOUNTS;
   if (!raw) return [];
 
@@ -118,7 +145,7 @@ export function getAccounts(): YandexAccount[] {
   if (cached) return cached;
 
   // Legacy entries first, then per-account variables override by id.
-  const byId = new Map<string, YandexAccount>();
+  const byId = new Map<string, BaseAccount>();
   for (const acc of parseLegacyJson()) byId.set(acc.id, acc);
   for (const acc of parsePerAccountVars()) byId.set(acc.id, acc);
 
@@ -132,13 +159,25 @@ export function getAccounts(): YandexAccount[] {
     );
   }
 
-  cached = result.data;
+  // Attach the client (owner) from YANDEX_CLIENTS by account id.
+  const clients = parseClients(process.env.YANDEX_CLIENTS);
+  cached = result.data.map((a) => ({
+    ...a,
+    client: clients.get(a.id) ?? null,
+  }));
   return cached;
 }
 
 // Safe, token-free list for use in client components.
 export function getPublicAccounts(): PublicAccount[] {
-  return getAccounts().map(({ id, label }) => ({ id, label }));
+  return getAccounts().map(({ id, label, client }) => ({ id, label, client }));
+}
+
+// Distinct client names (sorted), for the client filter.
+export function getClients(): string[] {
+  const names = new Set<string>();
+  for (const a of getAccounts()) if (a.client) names.add(a.client);
+  return [...names].sort((x, y) => x.localeCompare(y, "ru"));
 }
 
 export function getAccountById(id: string): YandexAccount | undefined {

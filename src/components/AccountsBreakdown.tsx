@@ -21,6 +21,7 @@ export function AccountsBreakdown({ accounts }: AccountsBreakdownProps) {
         <thead>
           <tr className="border-b border-gray-200 text-left text-xs uppercase tracking-wide text-gray-500">
             <th className="px-4 py-3 font-medium">Кабинет</th>
+            <th className="px-4 py-3 font-medium">Клиент</th>
             <th className="px-4 py-3 text-right font-medium">Показы</th>
             <th className="px-4 py-3 text-right font-medium">Клики</th>
             <th className="px-4 py-3 text-right font-medium">Расход</th>
@@ -44,6 +45,7 @@ export function AccountsBreakdown({ accounts }: AccountsBreakdownProps) {
                   <div className="mt-0.5 text-xs text-amber-600">{a.error}</div>
                 )}
               </td>
+              <td className="px-4 py-3 text-gray-600">{a.client ?? "—"}</td>
               <td className="px-4 py-3 text-right tabular-nums">
                 {formatInt(a.totals.impressions)}
               </td>

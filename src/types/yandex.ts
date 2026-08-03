@@ -25,6 +25,7 @@ export interface StatsTotals {
 export interface AccountStats {
   accountId: string;
   label: string;
+  client: string | null; // owning client (from YANDEX_CLIENTS), if any
   totals: StatsTotals;
   rows: CampaignRow[];
   refreshedAt: string | null; // ISO timestamp of the cached snapshot
