@@ -22,6 +22,7 @@ export function StatsView({ accounts, mode }: StatsViewProps) {
   const [filters, setFilters] = useState<StatsFilters>({
     ...presetRange("last30"),
     account: "all",
+    client: "all",
   });
 
   const { data, loading, error, refresh } = useStats(filters);
